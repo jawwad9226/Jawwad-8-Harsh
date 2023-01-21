@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="eng">
+<head>
+    <meta charset='utf-8' />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<style>
+div{ border: 1px red
+
+}
+
+</style>
+    
+    
+</head>
+    <body>
+       <b> <h4> LETS CALCULATE CIRCUMFERRENCE OF A CIRCLE</h1></b>
+             radious: <input type="number" id="radious" placeholder="enter radious"/>
+                <button onclick="solve()">get
+                </button>
+                <div >
+                    <p>so your CIRCUMFERRENCEis </p> <p id="circum"></p> 
+                    <p>so your area </p> <p id="area"></p> 
+                </div>
+           <script>
+                    function solve() { 
+                        let r = document.getElementById("radious").value;
+                console.log(r)
+                let c=r*2*22/7;
+                document.getElementById("circum").innerHTML=c;
+                console.log(c)
+                let a=r*r*22/7;
+                 document.getElementById("area").innerHTML=a       
+                    }
+             </script>       
+
+
+            
+
+
+
+    </body>
+</html>
