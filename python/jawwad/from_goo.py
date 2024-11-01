@@ -456,19 +456,28 @@ class LoginPage(tk.Frame):
 
 class AttendancePopup(tk.Toplevel):
     """Popup window for marking student attendance."""
-    def __init__(self, master, backend):
-        super().__init__(master)
+    def __init__(self, master, students):
         self.master = master
-        self.backend = backend
-        self.master.withdraw() 
-        self.title("Attendance")
-        self.geometry("500x400")
-        self.resizable(False, False)
-        self.configure(bg="white")
+        self.students = students
+        self.current_student_index = 0  # Start with the first student
+        self.master.withdraw()  # Hide the main window
 
-        # ... (Centering Logic from "attendance_popup.txt") ...
+        # Setup for attendance popup window
+        self.popup = tk.Toplevel(self.master)
+        self.popup.title("Attendance")
+        self.popup.geometry("500x400")
+        self.popup.resizable(False, False)
+        self.popup.configure(bg="white")
 
-        # Profile picture (placeholder)
+        # Center the popup on the screen
+        self.popup.update_idletasks()
+        width = self.popup.winfo_width()
+        height = self.popup.winfo_height()
+        x = (self.popup.winfo_screenwidth() // 2) - (width // 2)
+        y = (self.popup.winfo_screenheight() // 2) - (height // 2)
+        self.popup.geometry(f"+{x}+{y}")
+
+        # Profile picture placeholder
         try:
             profile_image = Image.open("profile.jpg").resize((80, 80), Image.LANCZOS)
             self.profile_photo = ImageTk.PhotoImage(profile_image)
@@ -477,76 +486,77 @@ class AttendancePopup(tk.Toplevel):
             self.profile_photo = None
 
         # Student Information Display
-        self.student_frame = tk.Frame(self, bg="white")
+        self.student_frame = tk.Frame(self.popup, bg="white")
         self.student_frame.pack(pady=20)
 
-        # ... (Display profile picture - Same as in "attendance_popup.txt") ...
+        # Display profile picture
+        if self.profile_photo:
+            self.photo_label = tk.Label(self.student_frame, image=self.profile_photo, bg="white")
+            self.photo_label.grid(row=0, column=0, rowspan=4, padx=(0, 20), pady=10)
 
-        # Student information labels
-        self.name_label = tk.Label(self.student_frame, text="Name: ", font=("Arial", 12), bg="white")
+        # Labels for student information
+        self.name_label = tk.Label(self.student_frame, text="", font=("Arial", 12), bg="white")
         self.name_label.grid(row=0, column=1, sticky="w")
+        self.roll_label = tk.Label(self.student_frame, text="", font=("Arial", 12), bg="white")
+        self.roll_label.grid(row=1, column=1, sticky="w")
+        self.contact_label = tk.Label(self.student_frame, text="", font=("Arial", 12), bg="white")
+        self.contact_label.grid(row=2, column=1, sticky="w")
+        self.enrollment_label = tk.Label(self.student_frame, text="", font=("Arial", 12), bg="white")
+        self.enrollment_label.grid(row=3, column=1, sticky="w")
 
-        # ... (Other Student Information Labels from "attendance_popup.txt") ...
-
-        # Buttons to mark attendance
-        self.attend_button = tk.Button(self, text="Attend", command=self.mark_attendance, bg="green", fg="white")
+        # Attendance buttons
+        self.attend_button = tk.Button(self.popup, text="Attend", command=lambda: self.mark_attendance("Present"),
+                                       bg="green", fg="white")
         self.attend_button.pack(pady=(20, 10))
 
-        self.reject_button = tk.Button(self, text="Reject", command=self.mark_absent, bg="red", fg="white")
+        self.reject_button = tk.Button(self.popup, text="Reject", command=lambda: self.mark_attendance("Absent"),
+                                       bg="red", fg="white")
         self.reject_button.pack(pady=(0, 20))
 
-        # ... (Navigation arrows - Placeholder functionality from "attendance_popup.txt") ...
+        # Navigation arrows
+        self.left_arrow = tk.Button(self.popup, text="<", command=self.prev_student)
+        self.left_arrow.place(relx=0.05, rely=0.5, anchor="center")
 
-        self.current_student_index = 0 
-        self.students = self.backend.load_student_data()
+        self.right_arrow = tk.Button(self.popup, text=">", command=self.next_student)
+        self.right_arrow.place(relx=0.95, rely=0.5, anchor="center")
+
+        # Load initial student data
         self.load_student_data()
 
-        self.protocol("WM_DELETE_WINDOW", self.close_popup)
+        # Handle popup close event
+        self.popup.protocol("WM_DELETE_WINDOW", self.close_popup)
 
-    def mark_attendance(self):
-        """Marks the current student as present."""
-        self.save_attendance("Present")
-        messagebox.showinfo("Attendance", "Marked as Present")
-        self.next_student()  # Move to the next student after marking
-
-    def mark_absent(self):
-        """Marks the current student as absent."""
-        self.save_attendance("Absent")
-        messagebox.showinfo("Attendance", "Marked as Absent")
-        self.next_student()  # Move to the next student after marking
-
-    def save_attendance(self, status):
-        """Saves attendance record to a file."""
+    def load_student_data(self):
+        """Load and display the current student's data."""
         student = self.students[self.current_student_index]
-        roll_number = student["Roll No."]
-        date_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        self.name_label.config(text=f"Name: {student.get('Name of Student', 'N/A')}")
+        self.roll_label.config(text=f"Roll Number: {student.get('Roll No.', 'N/A')}")
+        self.contact_label.config(text=f"Contact: {student.get('Student Mo.', 'N/A')}")
+        self.enrollment_label.config(text=f"Enrollment: {student.get('Enrollment No.', 'N/A')}")
+
+    def mark_attendance(self, status):
+        """Marks the student as present or absent and saves the record."""
+        student = self.students[self.current_student_index]
+        date_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         with open("attendance_records.txt", "a") as f:
-            f.write(f"{date_time}, Roll No.: {roll_number}, Name: {student['Name of Student']}, Status: {status}\n")
-        self.backend.mark_attendance(roll_number, status)
+            f.write(f"{date_time}, Name: {student['name']}, Roll Number: {student['roll_number']}, Status: {status}\n")
+        messagebox.showinfo("Attendance", f"Marked as {status}")
+        self.next_student()  # Move to the next student
 
     def prev_student(self):
-        """Navigates to the previous student."""
+        """Navigate to the previous student."""
         self.current_student_index = (self.current_student_index - 1) % len(self.students)
         self.load_student_data()
 
     def next_student(self):
-        """Navigates to the next student."""
+        """Navigate to the next student."""
         self.current_student_index = (self.current_student_index + 1) % len(self.students)
         self.load_student_data()
 
-    def load_student_data(self):
-        """Loads the current student's data into the labels."""
-        if self.students:
-            student = self.students[self.current_student_index]
-            self.name_label.config(text=f"Name: {student['Name of Student']}")
-            self.roll_label.config(text=f"Roll Number: {student['Roll No.']}")
-            self.contact_label.config(text=f"Contact: {student['Student Mo.']}")
-            self.enrollment_label.config(text=f"Enrollment: {student['Enrollment No.']}")
-
     def close_popup(self):
-        """Closes the popup and shows the main window."""
-        self.destroy()
-        self.master.deiconify() 
+        """Close the popup and show the main window again if needed."""
+        self.popup.destroy()
+        self.master.deiconify()
 
 class StudentAdminPage(tk.Frame):
     """Page displaying a list of students for admin view."""
@@ -599,6 +609,7 @@ class MainController:
     def __init__(self, root):
         self.root = root
         self.root.title("Student Information System")
+        self.target_page = None
         
         # Create a header frame
         self.header_frame = tk.Frame(self.root, bg="#dedede", height=50)
@@ -639,17 +650,21 @@ class MainController:
 
     def show_page(self, page_name, student_data=None, target_page=None):
         """Displays the specified page."""
-        page = self.pages.get(page_name)
+        if page_name == "LoginPage" and target_page:
+            self.target_page = target_page  # Store target page for post-login navigation
+
+        # Create AttendancePopup when needed
         if page_name == "AttendancePopup":
-            # Create a new instance of AttendancePopup each time it's shown
-            self.pages["AttendancePopup"] = AttendancePopup(self.root, self.backend)
+            students = self.backend.load_student_data()  # Load students from CSV
+            self.pages["AttendancePopup"] = AttendancePopup(self.root, students)
         else:
             page = self.pages.get(page_name)
             if page:
-                page.pack(fill=tk.BOTH, expand=True)  # Show the page using pack
-        if page_name == "StudentProfile" and student_data:
-            page.load_student_data(student_data)
+                page.pack(fill=tk.BOTH, expand=True)  # Show the page
+                if page_name == "StudentProfile":
+                    page.load_student_data(student_data)
 
+        # Hide other pages
         for other_page_name, other_page in self.pages.items():
             if other_page and other_page_name != page_name:
                 other_page.pack_forget()
@@ -657,11 +672,10 @@ class MainController:
     def handle_login(self, username, password):
         """Handles admin login attempts."""
         if self.backend.verify_admin(username, password):
-            target_page = self.pages.get("target_page")  # Get the intended target page
-            if target_page:
-                self.show_page(target_page)
-            else:
-                self.show_page("StudentAdminPage")
+             # Navigate to the stored target page if it exists, otherwise default to StudentAdminPage
+            self.show_page(self.target_page if self.target_page else "StudentAdminPage")
+            self.target_page = None  # Clear the target page after navigation
+        
         else:
             messagebox.showerror("Login Failed", "Incorrect username or password.")
 
